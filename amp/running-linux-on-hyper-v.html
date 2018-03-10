@@ -1,0 +1,364 @@
+<!doctype html><html amp lang="en"><head><meta charset="utf-8"><title>Running Linux on Hyper-V - Olivier Miossec</title><meta name="robots" content="index, follow"><link rel="canonical" href="https://omiossec.github.io/blog/running-linux-on-hyper-v.html"><meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1"><link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet" type="text/css"><script async custom-element="amp-sidebar" src="https://cdn.ampproject.org/v0/amp-sidebar-0.1.js"></script><script async custom-element="amp-social-share" src="https://cdn.ampproject.org/v0/amp-social-share-0.1.js"></script><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://omiossec.github.io/blog/amp/running-linux-on-hyper-v.html"},"headline":"Running Linux on Hyper-V","datePublished":"2018-03-10T22:07","dateModified":"2018-03-10T22:07","description":"With Windows 2008, running Linux as guest OS on hyper-v was sometime difficult. If you wanted to install old version of Ubuntu or a Network Virtual Appliance like pfsense you had to use Emulated device and/or to manually load hyper-v driver. Performance was sometime poor.","author":{"@type":"Person","name":"Olivier Miossec"},"publisher":{"@type":"Organization","name":"Olivier Miossec"}}</script><style amp-custom="">body,
+		div,
+		dl,
+		dt,
+		dd,
+		ul,
+		ol,
+		li,
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		h6,
+		pre,
+		figure,
+		form,
+		fieldset,
+		p,
+		blockquote,
+		th,
+		td {
+			margin: 0;
+			padding: 0;
+		}
+		body {
+			font-family: 'Roboto', sans-serif;
+			font-size: 1.1rem;
+			font-weight: 400;
+			line-height: 1.6;
+			background: #fff;
+			color: #000000;
+
+		}
+		a,
+		a:visited {
+			color: #039be5;
+			text-decoration: none;
+			outline: none;
+		}
+		a:hover,
+		a:active,
+		a:focus {
+			color: #000;
+		}
+		li {
+			list-style: none;
+		}
+		b,
+		strong {
+			font-weight: 700;
+		}
+		blockquote,
+		p,
+		ul,
+		ol,
+		dl,
+		table {
+			margin-top: 1.6rem;
+		}
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		h6 {
+			color: #000000;
+			letter-spacing: -0.03rem;
+			line-height: 1.2;
+			margin-top: 2.93333rem;
+		}
+
+		h1 {
+			font-size: 1.56621rem;
+
+		}
+
+		h2 {
+			font-size: 1.39219rem;
+		}
+
+		h3 {
+			font-size: 1.2375rem;
+		}
+
+		h4 {
+			font-size: 1.1rem;
+		}
+
+		h5 {
+			font-size: 0.97778rem;
+		}
+
+		h6 {
+			font-size: 0.86914rem;
+		}
+		h1+p,
+		h2+p,
+		h3+p,
+		h4+p,
+		h5+p,
+		h6+p {
+			margin-top: 0.8rem;
+		}
+		h1 > sup {
+			color: #777777;
+			font-size: 0.95rem;
+            font-weight: 400;
+		}
+		blockquote {
+			border-left: 0.2rem solid #039be5;
+			color: #039be5;
+			padding: 0.8rem 0 0.8rem 1.86667rem;
+		}
+		blockquote cite {
+			color: #111111;
+			display: block;
+			font-size: 0.9rem;
+			margin-top: 0.8rem;
+		}
+		blockquote cite:before {
+			content: "- ";
+		}
+		ul {
+			margin-left: 1rem;
+		}
+		ul>li {
+			list-style-position: outside;
+			padding-left: 1rem;
+		}
+		ol {
+			margin-left: 0;
+		}
+		ol>li {
+			counter-increment: step-counter;
+			position: relative;
+			padding-left: 2rem;
+		}
+		ol>li:before {
+			content: counter(step-counter) ".";
+			color: #111111;
+			left: 0;
+			position: absolute;
+		}
+		dl dt {
+			font-weight: 400;
+		}
+		pre {
+			margin: 1.6rem 0 0;
+			padding: 1.6rem 3.2rem;
+			white-space: pre-wrap;
+			word-wrap: break-word;
+		}
+		code,
+		pre {
+			background-color: #f6f6f6;
+			font-family: "Monaco", "Courier New", monospace;
+		}
+		table {
+			border-collapse: collapse;
+			border-spacing: 0;
+			display: block;
+			max-width: 100%;
+			overflow-x: auto;
+			vertical-align: top;
+			text-align: left;
+			white-space: nowrap;
+		}
+		table th {
+			border-bottom: 2px solid #dedede;
+			padding: 0.8rem 1.33333rem;
+		}
+		table tr:nth-child(2n) {
+			background: #f3f3f3;
+		}
+		table td {
+			padding: 0.8rem 1.33333rem;
+		}
+        figure {
+            margin: 2rem 0 1rem 0;
+        }
+		figcaption {
+			clear: both;
+			color: #4d4d4d;
+			font-style: italic;
+			font-size: 0.7rem;
+			margin: 0.8rem 0 0;
+			text-align: center;
+		}
+		.wrap {
+			max-width: 600px;
+			margin: 0 auto;
+			padding: 0 4%;
+		}
+		.navbar {
+            background: #039be5;
+            box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.2);
+            line-height: 3;
+            margin-bottom: 2.128rem;
+            max-height: 4rem;
+            padding: 0 4%;
+        }
+		.navbar>div {
+			align-items: center;
+			display: flex;
+			justify-content: center;
+			text-align: left;max-width: 600px;
+			margin: 0 auto;
+		}
+		.navbar a {
+			color: #fff;
+			text-decoration: none;
+		}
+		.logo {
+            display: block;
+			line-height: 1;
+			margin: 0 auto;
+			height: 2rem;
+            text-indent: -9999px;
+            width: 240px;
+		}
+        .logo.logo-text {
+            line-height: 1.6;
+            text-align: center;
+            text-indent: 0;
+        }
+		.navbar-sidebar-toggle {
+			left: 0;
+			position: relative;
+			text-indent: -99999rem;
+		}
+		.navbar-sidebar-toggle:before {
+            content: "";
+            display: block;
+			border-top: 0.375rem double #ffffff;
+			border-bottom: 0.125rem solid #ffffff;
+			height: 0.125rem;
+			position: absolute;
+			text-indent: 0;
+			top: 50%;
+			width: 1.3rem;
+			transform: translate(0px, -50%);
+		}
+        amp-img {
+            max-width: 100%;
+        }
+		amp-sidebar {
+			background: #fff;
+			width: 240px;
+		}
+		amp-sidebar li {
+			color: #212121;
+			font-size: 0.95rem;
+            font-weight: 700;
+			list-style: none;
+			 padding: 0.532rem 1rem;
+		}
+		amp-sidebar a, amp-sidebar a:visited {
+			border-left: 2px solid transparent;
+            color: #212121;
+		}
+		amp-sidebar ul ul {
+			margin: 1rem 0 0;
+		}
+		amp-sidebar li li { font-weight: 400;
+			 padding: 0.266rem 0 0.266rem 1rem;
+		}
+		.hero {
+			margin-bottom: 2.93333rem;
+		}
+		article  {
+			margin-bottom: 4rem;
+		}
+		article > header {
+			color: #777777;
+			font-size: 0.95rem;
+			margin-bottom: 1.866rem;
+		}
+		aside {
+			margin: 1.6rem 0 1.866rem;
+		}
+		amp-social-share {
+			border-radius: 50%;
+			background-size: 70%;
+            margin-right: 5px;
+		}
+		.pagination {
+			border-top: 1px solid #ddd;
+			display: flex;
+			justify-content: space-between;
+			align-items: baseline;
+		}
+		.pagination a {
+			color: #000000;
+			display: block;
+			font-size: 0.95rem;
+			font-weight: 700;
+			line-height: 1;
+			margin: 0 0 0.532rem;
+			position: relative;
+		}
+		.pagination a + a {
+            width: 50%;
+            text-align: right;
+        }
+		.pagination-prev {
+			padding: 0.8rem 0.8rem 0.8rem 1.6rem;
+		}
+		.pagination-next {
+			padding: 0.8rem 1.6rem 0.8rem 0.8rem;
+		}
+		.pagination-next:before {
+			content: "\2192";
+			position: absolute;
+			right: 0;
+		}
+		.pagination-prev:before {
+			content: "\2190";
+			position: absolute;
+			left: 0;
+		}
+		.post-tag {
+			font-size: 0.95rem;
+			margin-bottom: 1.866rem;
+		}
+		.post-tag dt {
+			float: left;
+		}
+		.post-tag dd {
+			display: inline-block;
+			list-style: none;
+			margin: 0 0 0 0.266rem;
+		}
+		.post-tag dd>a:after {
+			content: ", ";
+		}
+		.bottom {
+			background: #039be5;
+			color: #fff;
+			font-size: 0.95rem;
+			padding: 1rem 4%;
+			text-align: center;
+		}
+        .author-avatar {
+            margin: 1rem auto;
+            width: 100px;
+        }</style><style amp-boilerplate>body{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}</style><noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript><script async src="https://cdn.ampproject.org/v0.js"></script></head><body><nav class="navbar"><div><a on="tap:navbar-sidebar.toggle" class="navbar-sidebar-toggle" title="Menu">Menu</a> <a class="logo logo-text" href="https://omiossec.github.io/blog/amp">Olivier Miossec</a></div></nav><main class="wrap"><article class="post"><header><h1>Running Linux on Hyper-V</h1><p>by <a href="https://omiossec.github.io/blog/amp/authors/olivier-miossec/" rel="nofollow" title="Olivier Miossec">Olivier Miossec</a>,<br>published on <time datetime="2018-03-10T22:07">10 Mar 2018</time></p></header><p>With Windows 2008, running Linux as guest OS on hyper-v was sometime difficult. If you wanted to install old version of Ubuntu or a Network Virtual Appliance like pfsense you had to use Emulated device and/or to manually load hyper-v driver. Performance was sometime poor.</p><p>It’s now part of History. In July 2009, Microsoft released Hyper-v drivers for Linux under GPLv2 license. There was 7 drivers vmbus, storvsc, blkvsc, netvsc,utils and timesource in Hyper-v 2008 R2, much more in Windows 2012 R2 and Windows 2016. Modern Linux version can now run in the same way as Windows Guest and offer performance near bare metal version.</p><p>Now most feature available in windows 2012 R2 as guest are available in the latest version of major linux distribution and some of FreeBds/Linux based network virtual appliance.</p><p>Secure boot, the anti-rootkit in generation 2 VM, work with Ubuntu 16 on Windows 2016 (you have to choose “MicrosoftUEFICertificateAuthority” as secure boot template).</p><p>Here the functions available in Linux and FreeBsd: <a href="https://technet.microsoft.com/fr-fr/library/dn531031.aspx">https://technet.microsoft.com/fr-fr/library/dn531031.aspx</a></p><p>You can find more information about feature and Ubuntu: <a href="https://technet.microsoft.com/fr-fr/library/dn531029.aspx">https://technet.microsoft.com/fr-fr/library/dn531029.aspx</a></p><p>Installing modern Linux OS on Hyper-V 2012 R2/2016 is as simple as installing Windows Server OS.</p><p><strong>But there are some best practices to follows.</strong></p><p>When using dynamic disk with windows, you may need to create the VHDX file in Powershell. You can use a 1 MB block size for the VHDX file (not the logical or physical sector size).</p><pre>PS&gt; New-VHD –Path x:\localion\VMLinux.vhdx –SizeBytes 80GB –Dynamic –BlockSizeBytes 1MB
+</pre><p>Doing so will prevent the growing of the VHDX file because of the free space used in some Linux Filesystem. Inside a VM you should always use ext4 You should also change de way how Linux schedule I/O to first in first out to pass the schedule choice to the hypervisor.</p><pre>$sudo nano /etc/default/grub
+/// 
+
+Change the line 
+</pre><p>GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"</p><pre>to 
+
+</pre><pre>GRUB_CMDLINE_LINUX_DEFAULT="quiet splash elevator=noop"
+</pre><pre>Than 
+
+ 
+</pre><p>$sudo update-grub</p><pre>And restart 
+
+You will need to modify the GRUB menu too if the VM has more 8 vcpu or more or more than 30 GB
+
+
+&gt; 
+</pre><blockquote><p>$sudo nano /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT="quiet splash elevator=noop numa=off" /// Than /// $sudo update-grub ///</p></blockquote><p>Also if you find that the resolution in the vconnect is too small for your need you can add this to the GRUB video=hyperv_fb:XXXxXXX</p><p>Don’t forget to update the GRUB and restart the server<br><br></p><p>If you had Linux VM into a hyper-v Cluster, you may need to use static MAC address. During fail over the new mac address can trigger network restart on the guest.</p><p>If you use Ubuntu LTS 14.04, 16.04 or 12.04 you can in update the kernel with the latest Hardware Enablement.</p><blockquote><p>16.04 $sudo apt-get update $sudo apt-get install --install-recommends linux-virtual-lts-xenial</p></blockquote><blockquote><p>14.04 $sudo apt-get update $sudo apt-get install --install-recommends linux-virtual-lts-wily</p></blockquote><blockquote><p>12.04 $sudo apt-get update $sudo apt-get install --install-recommends linux-generic-lts-trusty</p></blockquote><p>Then you need to add hyper-v daemons</p><blockquote><p>16.04 $sudo apt-get install --install-recommends linux-tools-virtual-lts-xenial linux-cloud-tools-virtual-lts-xenial</p><p>14.04 $sudo apt-get install --install-recommends hv-kvp-daemon-init linux-tools-virtual-lts-wily linux-cloud-tools-virtual-lts-wily</p><p>12.04 $sudo apt-get install --install-recommends hv-kvp-daemon-init linux-tools-lts-trusty linux-cloud-tools-generic-lts-trusty</p></blockquote><p>Rarely kernel update can do more arms than good. Last year in September, the Kernel 3.16.0.48 triggered network and I/O problems.</p><blockquote><p>hv_netvsc vmbus_0_12 eth0: unable to send receive completion pkt (tid XXXX)...retrying 4</p></blockquote><p><a href="https://bugs.launchpad.net/ubuntu/+source/linux-lts-utopic/+bug/1491957">https://bugs.launchpad.net/ubuntu/+source/linux-lts-utopic/+bug/1491957</a></p><p><strong>Automation</strong> There are no sysprep equivalent in the linux world, so how it’s possible to spawn a VM without installing it from the DVDRom. There is a solution, most Linux distribution provides cloud image, OS image optimized for cloud hosting.</p><p>from Ubuntu <a href="http://cloud-images.ubuntu.com/xenial/">http://cloud-images.ubuntu.com/xenial/</a></p><p>It’s possible to use this version with Hyper-V. Then you have cloud-init, a tool used in Open-Stack to enable cloud automation. In Hyper-v we can’t not use cloudinit as it’s used in Open-Stack. We need to relay on CDRom to enter information.</p><p>You can check this sample on GitHub</p><p><a href="https://github.com/Microsoft/Virtualization-Documentation/blob/master/hyperv-samples/benarm-powershell/Ubuntu-VM-Build/BaseUbuntuBuild.ps1">https://github.com/Microsoft/Virtualization-Documentation/blob/master/hyperv-samples/benarm-powershell/Ubuntu-VM-Build/BaseUbuntuBuild.ps1</a></p><p>You just need to remember that the user in: password: $($GuestAdminPassword) is Ubuntu</p><p>You can setup the IP address for the server</p><blockquote><p>instance-id: iid-abcdefg network-interfaces: | auto lo iface lo inet loopback</p><p>iface eth0 inet static address 192.168.10.10 network 192.168.10.0 netmask 255.255.255.0 broadcast 192.168.10.255 gateway 192.168.1O.1 hostname: MyServer</p></blockquote><aside><amp-social-share type="facebook" width="40" height="40" data-param-app_id="" data-param-text="Running Linux on Hyper-V" data-param-href="https://omiossec.github.io/blog/amp/running-linux-on-hyper-v.html"></amp-social-share><amp-social-share type="twitter" width="40" height="40" data-param-text="c" data-param-url="https://omiossec.github.io/blog/amp/running-linux-on-hyper-v.html"></amp-social-share><amp-social-share type="pinterest" width="40" height="40" data-param-url="https://omiossec.github.io/blog/amp/running-linux-on-hyper-v.html"></amp-social-share></aside></article><nav class="pagination"></nav></main><footer class="bottom">Powered by Publii</footer><amp-sidebar id="navbar-sidebar" layout="nodisplay"><ul></ul></amp-sidebar></body></html>

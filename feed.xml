@@ -3,12 +3,180 @@
     <title>olivier-miossec</title>
     <link href="https://omiossec.github.io/blog/feed.xml" rel="self" />
     <link href="https://omiossec.github.io/blog" />
-    <updated>2018-03-10T17:30:03+01:00</updated>
+    <updated>2018-03-10T22:08:44+01:00</updated>
     <author>
         <name>Olivier Miossec</name>
     </author>
     <id>https://omiossec.github.io/blog</id>
 
+    <entry>
+        <title>Running Linux on Hyper-V</title>
+        <author>
+            <name>Olivier Miossec</name>
+        </author>
+        <link href="https://omiossec.github.io/blog/running-linux-on-hyper-v.html"/>
+        <id>https://omiossec.github.io/blog/running-linux-on-hyper-v.html</id>
+
+        <updated>2018-03-10T22:07:10+01:00</updated>
+            <summary></summary>
+        <content type="html">
+            <![CDATA[
+                <p>With Windows 2008, running Linux as guest OS on hyper-v was sometime difficult. If you wanted to install old version of Ubuntu or a Network Virtual Appliance like pfsense you had to use Emulated device and/or to manually load hyper-v driver. Performance was sometime poor.</p>
+<p>It’s now part of History. In July 2009, Microsoft released Hyper-v drivers for Linux under GPLv2 license. There was 7 drivers vmbus, storvsc, blkvsc, netvsc,utils and timesource in Hyper-v 2008 R2, much more in Windows 2012 R2 and Windows 2016. Modern Linux version can now run in the same way as Windows Guest and offer performance near bare metal version.</p>
+<p>Now most feature available in windows 2012 R2 as guest are available in the latest version of major linux distribution and some of FreeBds/Linux based network virtual appliance.</p>
+<p>Secure boot, the anti-rootkit in generation 2 VM, work with Ubuntu 16 on Windows 2016 (you have to choose “MicrosoftUEFICertificateAuthority” as secure boot template).</p>
+<p>Here the functions available in Linux and FreeBsd: <a href="https://technet.microsoft.com/fr-fr/library/dn531031.aspx">https://technet.microsoft.com/fr-fr/library/dn531031.aspx</a></p>
+<p>You can find more information about feature and Ubuntu: <a href="https://technet.microsoft.com/fr-fr/library/dn531029.aspx">https://technet.microsoft.com/fr-fr/library/dn531029.aspx</a></p>
+<p>Installing modern Linux OS on Hyper-V 2012 R2/2016 is as simple as installing Windows Server OS.</p>
+<p><strong>But there are some best practices to follows.</strong></p>
+<p>When using dynamic disk with windows, you may need to create the VHDX file in Powershell. You can use a 1 MB block size for the VHDX file (not the logical or physical sector size).</p>
+<pre>PS&gt; New-VHD –Path x:\localion\VMLinux.vhdx –SizeBytes 80GB –Dynamic –BlockSizeBytes 1MB
+</pre>
+<p>Doing so will prevent the growing of the VHDX file because of the free space used in some Linux Filesystem. Inside a VM you should always use ext4 You should also change de way how Linux schedule I/O to first in first out to pass the schedule choice to the hypervisor.</p>
+<pre>$sudo nano /etc/default/grub
+/// 
+
+Change the line 
+</pre>
+<p>GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"</p>
+<pre>to 
+
+</pre>
+<pre>GRUB_CMDLINE_LINUX_DEFAULT="quiet splash elevator=noop"
+</pre>
+<pre>Than 
+
+ 
+</pre>
+<p>$sudo update-grub</p>
+<pre>And restart 
+
+You will need to modify the GRUB menu too if the VM has more 8 vcpu or more or more than 30 GB
+
+
+&gt; 
+</pre>
+<blockquote>
+<p>$sudo nano /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT="quiet splash elevator=noop numa=off" /// Than /// $sudo update-grub ///</p>
+</blockquote>
+<p>Also if you find that the resolution in the vconnect is too small for your need you can add this to the GRUB video=hyperv_fb:XXXxXXX</p>
+<p>Don’t forget to update the GRUB and restart the server<br><br></p>
+<p>If you had Linux VM into a hyper-v Cluster, you may need to use static MAC address. During fail over the new mac address can trigger network restart on the guest.</p>
+<p>If you use Ubuntu LTS 14.04, 16.04 or 12.04 you can in update the kernel with the latest Hardware Enablement.</p>
+<blockquote>
+<p>16.04 $sudo apt-get update $sudo apt-get install --install-recommends linux-virtual-lts-xenial</p>
+</blockquote>
+<blockquote>
+<p>14.04 $sudo apt-get update $sudo apt-get install --install-recommends linux-virtual-lts-wily</p>
+</blockquote>
+<blockquote>
+<p>12.04 $sudo apt-get update $sudo apt-get install --install-recommends linux-generic-lts-trusty</p>
+</blockquote>
+<p>Then you need to add hyper-v daemons</p>
+<blockquote>
+<p>16.04 $sudo apt-get install --install-recommends linux-tools-virtual-lts-xenial linux-cloud-tools-virtual-lts-xenial</p>
+<p>14.04 $sudo apt-get install --install-recommends hv-kvp-daemon-init linux-tools-virtual-lts-wily linux-cloud-tools-virtual-lts-wily</p>
+<p>12.04 $sudo apt-get install --install-recommends hv-kvp-daemon-init linux-tools-lts-trusty linux-cloud-tools-generic-lts-trusty</p>
+</blockquote>
+<p>Rarely kernel update can do more arms than good. Last year in September, the Kernel 3.16.0.48 triggered network and I/O problems.</p>
+<blockquote>
+<p>hv_netvsc vmbus_0_12 eth0: unable to send receive completion pkt (tid XXXX)...retrying 4</p>
+</blockquote>
+<p><a href="https://bugs.launchpad.net/ubuntu/+source/linux-lts-utopic/+bug/1491957">https://bugs.launchpad.net/ubuntu/+source/linux-lts-utopic/+bug/1491957</a></p>
+<p><strong>Automation</strong> There are no sysprep equivalent in the linux world, so how it’s possible to spawn a VM without installing it from the DVDRom. There is a solution, most Linux distribution provides cloud image, OS image optimized for cloud hosting.</p>
+<p>from Ubuntu <a href="http://cloud-images.ubuntu.com/xenial/">http://cloud-images.ubuntu.com/xenial/</a></p>
+<p>It’s possible to use this version with Hyper-V. Then you have cloud-init, a tool used in Open-Stack to enable cloud automation. In Hyper-v we can’t not use cloudinit as it’s used in Open-Stack. We need to relay on CDRom to enter information.</p>
+<p>You can check this sample on GitHub</p>
+<p><a href="https://github.com/Microsoft/Virtualization-Documentation/blob/master/hyperv-samples/benarm-powershell/Ubuntu-VM-Build/BaseUbuntuBuild.ps1">https://github.com/Microsoft/Virtualization-Documentation/blob/master/hyperv-samples/benarm-powershell/Ubuntu-VM-Build/BaseUbuntuBuild.ps1</a></p>
+<p>You just need to remember that the user in: password: $($GuestAdminPassword) is Ubuntu</p>
+<p>You can setup the IP address for the server</p>
+<blockquote>
+<p>instance-id: iid-abcdefg network-interfaces: | auto lo iface lo inet loopback</p>
+<p>iface eth0 inet static address 192.168.10.10 network 192.168.10.0 netmask 255.255.255.0 broadcast 192.168.10.255 gateway 192.168.1O.1 hostname: MyServer</p>
+</blockquote>
+            ]]>
+        </content>
+    </entry>
+    <entry>
+        <title>Sophos XG Firewall on Hyper-v</title>
+        <author>
+            <name>Olivier Miossec</name>
+        </author>
+        <link href="https://omiossec.github.io/blog/sophos-xg-firewall-on-hyper-v.html"/>
+        <id>https://omiossec.github.io/blog/sophos-xg-firewall-on-hyper-v.html</id>
+
+        <updated>2018-03-10T22:05:07+01:00</updated>
+            <summary></summary>
+        <content type="html">
+            <![CDATA[
+                <p>The Sophos XG Firewall is a powerful and advanced NextGen Firewall. It works well in virtualized environment. You can find more info about Sophos XG Firewall <a href="https://www.sophos.com/en-us/products/next-gen-firewall.aspx?ID=98304-17697" target="_blank" rel="noopener noreferrer">here</a></p>
+<p>The XG firewall run on Hyper-v as a Gen 1 VM, it supports VLAN in access or trunk mode and VMQ. You can use up to 8 net adapters. If you need more, you can use VLAN trunking to create more net adapters.</p>
+<p>There are 2 ways to create an XG Firewall. You can use the ready to use VHD files or you can install it from the ISO. <br>Only the first method is described in this post.</p>
+<p>First, we need to design the network. We need at least 3 net adapters, one for the admin network used for the first setup, one for the wan connection and one for LAN connection.</p>
+<p>The first one is used during the setup to configure the firewall. It must be on a separate network, you will need to use 172.16.16.0/24 and you must be able to open a web browser to this network.</p>
+<p>The WAN adapter must be bound to a virtual switch with internet access. It’s important that the firewall can access the Internet during Setup as it’s used to register the device.</p>
+<p>The LAN adapter can be bound to any virtual switch and configured as you need. But remember, hyper-v default VM net adapter do not allow to have multiple MAC on a port, so you will have to disable this option.</p>
+<p>Be aware the order of the net adapter is important. The first net adapter (eth0) will be used for the initial setup and the second for external access.</p>
+<p>Let’s start,</p>
+<pre><code>#this script setup a new XG Firewall
+#this is the Hyper-v Server used to run the virtual Firewall
+$ComputerName = "MyHyperVServer"
+#the name of the virtual firewall VM
+$vmname = "MyNewFirewal"
+
+ #the Ram of the firewall, from 1Gb to unlimited 
+$ram = 6GB
+#the number of vCpu, from 1 to unlimited check your licence
+$vmproc = 4
+
+#the path of the VM on the Hyper-V server
+
+$path = "e:\xfSophosFirewall"
+
+
+
+#Names of the virtual switch used in this example
+#the admin vSwitch used for initial setup and later for admin
+$vswitchadmin = "admin"
+#The virtual Switch used for external access during the setup and later
+$vswtichwan = "Wan"
+#the virtual switch used for internal network
+$vswitchlan = "lan"
+
+#the Path of the 2 VHD
+$fwPRIMARYVhd = "$path\PRIMARY-DISK.vhd"
+$fwAUXILIARYVhd = "$path\AUXILIARY-DISK.vhd"
+
+#create the VM
+New-VM -Verbose -name $vmname -MemoryStartupBytes  $ram  -Generation 1  -Path $path  -ComputerName $ComputerName
+#Setup vm processor
+ Set-VMProcessor  -Count $vmProc -VMName $vmname -ComputerName $ComputerName 
+
+#remove all net interface 
+Get-VMNetworkAdapter -VMName $vmname -ComputerName $ComputerName | Remove-VMNetworkAdapter
+
+# add the 2 harddrive to the newly vm
+Add-VMHardDiskDrive -path $fwPRIMARYVhd -vmname $vmname -ComputerName $ComputerName -ControllerType IDE -ControllerNumber 0
+Add-VMHardDiskDrive -path $fwAUXILIARYVhd -vmname $vmname -ComputerName $ComputerName -ControllerType IDE -ControllerNumber 0
+
+# Admin setup interface 
+# I use a vlan, but you can also use a dedicaded network
+Add-VMNetworkAdapter -ComputerName $ComputerName -VMName $vmname -SwitchName $vswitchadmin -Name setup 
+
+#Add the wan interface, on the 
+Add-VMNetworkAdapter -ComputerName $ComputerName -VMName $vmname -SwitchName $vswtichwan -Name wan
+Set-VMNetworkAdaptervlan -vmname $vmname -VMNetworkAdapterName wan -access -vlanID 5 -computername $ComputerName
+
+#add the lan interface. It's a trunk interface with a default vlan
+Add-VMNetworkAdapter -ComputerName $ComputerName -VMName $vmname -SwitchName $vswitchlan -Name lan
+Set-VMNetworkAdapter -ComputerName $ComputerName -VMName $vmname -Name lan  -MacAddressSpoofing On
+Set-VMNetworkAdaptervlan -vmname $vmname -VMNetworkAdapterName lan -Trunk -AllowedVlanIdList "6,7" -NativeVlanId 10
+</code></pre>
+<p>After the setup, you should change the admin/setup IP address to fit your admin network. If you forget this step, you may fail to setup another XG Firewall on the same network as 2 devices will have the same IP 172.16.16.16.</p>
+<p>You can also find the script <a href="https://github.com/omiossec/Sophos-PowerShell/blob/DEV/simpleXGFirewallSetup.ps1" target="_blank" rel="noopener noreferrer">here</a></p>
+            ]]>
+        </content>
+    </entry>
     <entry>
         <title>PS SQL TEST</title>
         <author>
